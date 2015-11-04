@@ -102,11 +102,11 @@
 	
 	function main(drivers) {
 	  var INITIAL_STATE = {
-	    points: [],
+	    points: [[0, 0]],
 	    cursor: [0, 0]
 	  };
 	
-	  var state$ = drivers.keyboard.scan(function (model, direction) {
+	  var state$ = _rx2['default'].Observable.just(INITIAL_STATE).merge(drivers.keyboard).scan(function (model, direction) {
 	    if (!direction) return model;
 	
 	    var points = deduplicatePoints(addPoint(model));
@@ -135,7 +135,7 @@
 	      points: points,
 	      cursor: [cursorX, cursorY]
 	    };
-	  }, INITIAL_STATE);
+	  });
 	
 	  return {
 	    board: state$
@@ -12695,11 +12695,12 @@
 	
 	function makeBoardDriver() {
 	  return function boardDriver(model$) {
-	    var board = _BoardElm2['default'].fullscreen(_BoardElm2['default'].Board, {
-	      model: {
-	        points: [],
-	        cursor: [0, 0]
-	      }
+	    var board = undefined;
+	
+	    model$.first().subscribe(function (model) {
+	      board = _BoardElm2['default'].fullscreen(_BoardElm2['default'].Board, {
+	        model: model
+	      });
 	    });
 	
 	    model$.subscribe(function (model) {

@@ -29,11 +29,14 @@ function addPoint(model) {
 
 function main(drivers) {
   const INITIAL_STATE = {
-    points: [],
+    points: [[0, 0]],
     cursor: [0, 0]
   };
 
-  const state$ = drivers.keyboard
+  const state$ = Rx.Observable.just(INITIAL_STATE)
+    .merge(
+      drivers.keyboard
+    )
     .scan(function (model, direction) {
       if (!direction) return model;
 
@@ -59,7 +62,7 @@ function main(drivers) {
         points,
         cursor: [cursorX, cursorY]
       };
-    }, INITIAL_STATE);
+    });
 
   return {
     board: state$
