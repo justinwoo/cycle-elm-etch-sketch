@@ -102,39 +102,54 @@
 	
 	function main(drivers) {
 	  var INITIAL_STATE = {
-	    points: [[0, 0]],
+	    points: [],
 	    cursor: [0, 0]
 	  };
 	
-	  var state$ = _rx2['default'].Observable.just(INITIAL_STATE).merge(drivers.keyboard).scan(function (model, direction) {
-	    if (!direction) return model;
+	  var moveCursor$ = drivers.keyboard.directionInput$.map(function (direction) {
+	    return function (model) {
+	      if (!direction) return model;
 	
-	    var points = deduplicatePoints(addPoint(model));
+	      var points = deduplicatePoints(addPoint(model));
 	
-	    var _model$cursor = _slicedToArray(model.cursor, 2);
+	      var _model$cursor = _slicedToArray(model.cursor, 2);
 	
-	    var cursorX = _model$cursor[0];
-	    var cursorY = _model$cursor[1];
+	      var cursorX = _model$cursor[0];
+	      var cursorY = _model$cursor[1];
 	
-	    switch (direction) {
-	      case _keyboardDriver.UP:
-	        cursorY++;
-	        break;
-	      case _keyboardDriver.DOWN:
-	        cursorY--;
-	        break;
-	      case _keyboardDriver.LEFT:
-	        cursorX--;
-	        break;
-	      case _keyboardDriver.RIGHT:
-	        cursorX++;
-	        break;
-	    }
+	      switch (direction) {
+	        case _keyboardDriver.UP:
+	          cursorY++;
+	          break;
+	        case _keyboardDriver.DOWN:
+	          cursorY--;
+	          break;
+	        case _keyboardDriver.LEFT:
+	          cursorX--;
+	          break;
+	        case _keyboardDriver.RIGHT:
+	          cursorX++;
+	          break;
+	      }
 	
-	    return {
-	      points: points,
-	      cursor: [cursorX, cursorY]
+	      return {
+	        points: points,
+	        cursor: [cursorX, cursorY]
+	      };
 	    };
+	  });
+	
+	  var clearScreen$ = drivers.board.requestScreenClear$.map(function () {
+	    return function (model) {
+	      return {
+	        points: [],
+	        cursor: model.cursor
+	      };
+	    };
+	  });
+	
+	  var state$ = _rx2['default'].Observable.merge(moveCursor$, clearScreen$).startWith(INITIAL_STATE).scan(function (state, mapper) {
+	    return mapper(state);
 	  });
 	
 	  return {
@@ -12689,6 +12704,10 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 	
+	var _rx = __webpack_require__(/*! rx */ 2);
+	
+	var _rx2 = _interopRequireDefault(_rx);
+	
 	var _BoardElm = __webpack_require__(/*! ./Board.elm */ 7);
 	
 	var _BoardElm2 = _interopRequireDefault(_BoardElm);
@@ -12696,16 +12715,32 @@
 	function makeBoardDriver() {
 	  return function boardDriver(model$) {
 	    var board = undefined;
+	    var screenClick$ = new _rx2['default'].Subject();
+	    var requestScreenClear$ = screenClick$.buffer(function () {
+	      return screenClick$.debounce(250);
+	    }).map(function (events) {
+	      return events.length;
+	    }).filter(function (clicks) {
+	      return clicks >= 2;
+	    });
 	
 	    model$.first().subscribe(function (model) {
 	      board = _BoardElm2['default'].fullscreen(_BoardElm2['default'].Board, {
 	        model: model
+	      });
+	
+	      board.ports.mouseClicks.subscribe(function () {
+	        screenClick$.onNext();
 	      });
 	    });
 	
 	    model$.subscribe(function (model) {
 	      board.ports.model.send(model);
 	    });
+	
+	    return {
+	      requestScreenClear$: requestScreenClear$
+	    };
 	  };
 	}
 	
@@ -12914,6 +12949,7 @@
 	   $Graphics$Element = Elm.Graphics.Element.make(_elm),
 	   $List = Elm.List.make(_elm),
 	   $Maybe = Elm.Maybe.make(_elm),
+	   $Mouse = Elm.Mouse.make(_elm),
 	   $Result = Elm.Result.make(_elm),
 	   $Signal = Elm.Signal.make(_elm),
 	   $Window = Elm.Window.make(_elm);
@@ -12938,6 +12974,11 @@
 	                                                                       v.cursor)} : _U.badPort("an object with fields `points`, `cursor`",
 	      v);
 	   });
+	   var mouseClicks = Elm.Native.Port.make(_elm).outboundSignal("mouseClicks",
+	   function (v) {
+	      return [];
+	   },
+	   $Mouse.clicks);
 	   var Model = F2(function (a,b) {
 	      return {_: {}
 	             ,cursor: b
@@ -12979,7 +13020,7 @@
 	                 _L.fromArray([cursor])));
 	              }();}
 	         _U.badCase($moduleName,
-	         "between lines 34 and 41");
+	         "between lines 35 and 42");
 	      }();
 	   });
 	   var main = A3($Signal.map2,
@@ -14786,6 +14827,37 @@
 	                       ,Just: Just
 	                       ,Nothing: Nothing};
 	   return _elm.Maybe.values;
+	};
+	Elm.Mouse = Elm.Mouse || {};
+	Elm.Mouse.make = function (_elm) {
+	   "use strict";
+	   _elm.Mouse = _elm.Mouse || {};
+	   if (_elm.Mouse.values)
+	   return _elm.Mouse.values;
+	   var _op = {},
+	   _N = Elm.Native,
+	   _U = _N.Utils.make(_elm),
+	   _L = _N.List.make(_elm),
+	   $moduleName = "Mouse",
+	   $Basics = Elm.Basics.make(_elm),
+	   $Native$Mouse = Elm.Native.Mouse.make(_elm),
+	   $Signal = Elm.Signal.make(_elm);
+	   var clicks = $Native$Mouse.clicks;
+	   var isDown = $Native$Mouse.isDown;
+	   var position = $Native$Mouse.position;
+	   var x = A2($Signal.map,
+	   $Basics.fst,
+	   position);
+	   var y = A2($Signal.map,
+	   $Basics.snd,
+	   position);
+	   _elm.Mouse.values = {_op: _op
+	                       ,position: position
+	                       ,x: x
+	                       ,y: y
+	                       ,isDown: isDown
+	                       ,clicks: clicks};
+	   return _elm.Mouse.values;
 	};
 	Elm.Native.Basics = {};
 	Elm.Native.Basics.make = function(localRuntime) {
@@ -16634,6 +16706,50 @@
 		};
 		return localRuntime.Native.List.values = Elm.Native.List.values;
 	
+	};
+	
+	Elm.Native = Elm.Native || {};
+	Elm.Native.Mouse = {};
+	Elm.Native.Mouse.make = function(localRuntime) {
+	
+		localRuntime.Native = localRuntime.Native || {};
+		localRuntime.Native.Mouse = localRuntime.Native.Mouse || {};
+		if (localRuntime.Native.Mouse.values)
+		{
+			return localRuntime.Native.Mouse.values;
+		}
+	
+		var NS = Elm.Native.Signal.make(localRuntime);
+		var Utils = Elm.Native.Utils.make(localRuntime);
+	
+		var position = NS.input('Mouse.position', Utils.Tuple2(0,0));
+	
+		var isDown = NS.input('Mouse.isDown', false);
+	
+		var clicks = NS.input('Mouse.clicks', Utils.Tuple0);
+	
+		var node = localRuntime.isFullscreen()
+			? document
+			: localRuntime.node;
+	
+		localRuntime.addListener([clicks.id], node, 'click', function click() {
+			localRuntime.notify(clicks.id, Utils.Tuple0);
+		});
+		localRuntime.addListener([isDown.id], node, 'mousedown', function down() {
+			localRuntime.notify(isDown.id, true);
+		});
+		localRuntime.addListener([isDown.id], node, 'mouseup', function up() {
+			localRuntime.notify(isDown.id, false);
+		});
+		localRuntime.addListener([position.id], node, 'mousemove', function move(e) {
+			localRuntime.notify(position.id, Utils.getXY(e));
+		});
+	
+		return localRuntime.Native.Mouse.values = {
+			position: position,
+			isDown: isDown,
+			clicks: clicks
+		};
 	};
 	
 	Elm.Native.Port = {};
@@ -19966,7 +20082,7 @@
 	
 	function makeKeyboardDriver() {
 	  return function keyboardDriver() {
-	    return _rx2['default'].Observable.fromEvent(window, 'keydown').map(function (_ref) {
+	    var directionInput$ = _rx2['default'].Observable.fromEvent(window, 'keydown').map(function (_ref) {
 	      var keyCode = _ref.keyCode;
 	
 	      for (var i = 0; i < MAPPINGS.length; i++) {
@@ -19980,6 +20096,10 @@
 	        }
 	      }
 	    });
+	
+	    return {
+	      directionInput$: directionInput$
+	    };
 	  };
 	}
 

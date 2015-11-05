@@ -19,7 +19,7 @@ const MAPPINGS = [
 
 export default function makeKeyboardDriver() {
   return function keyboardDriver() {
-    return Rx.Observable.fromEvent(window, 'keydown')
+    const directionInput$ = Rx.Observable.fromEvent(window, 'keydown')
       .map(function ({keyCode}) {
         for (let i = 0; i < MAPPINGS.length; i++) {
           const [inputs, direction] = MAPPINGS[i];
@@ -29,5 +29,9 @@ export default function makeKeyboardDriver() {
           }
         }
       });
+
+    return {
+      directionInput$
+    };
   }
 }

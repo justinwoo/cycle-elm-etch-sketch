@@ -4,6 +4,7 @@ import Color exposing (Color, rgb)
 import Graphics.Collage exposing (Form, collage, rect, filled, move)
 import Graphics.Element exposing (Element)
 import Window
+import Mouse
 
 -- CONSTANTS
 cellSize : Float
@@ -41,6 +42,9 @@ view (w, h) model =
     |> collage w h
 
 -- SIGNALS
+port mouseClicks : Signal ()
+port mouseClicks = Mouse.clicks
+
 port model : Signal Model
 
 main : Signal Element
